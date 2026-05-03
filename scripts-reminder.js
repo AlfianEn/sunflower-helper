@@ -21,16 +21,19 @@ function log(key){ db.prepare('INSERT OR REPLACE INTO reminder_log(key,sentAt) V
   const now = Date.now()
   const remindReady = setting('remindReady', 'true') !== 'false'
   const beforeMin = Math.max(0, Number(setting('remindBeforeMinutes', '5') || 0))
-  const plans = db.prepare(`SELECT * FROM crop_plans WHERE status='active' ORDER BY harvestAt ASC`).all()
+  try { require('child_process').execFileSync(process.execPath, ['scripts-sync-farm.js'], { cwd: process.cwd(), stdio: 'inherit' }) } catch (e) { console.error('[sync-farm-failed]', e.message) }
+  const manualPlans = db.prepare(`SELECT id, crop, plotCount, harvestAt, 'manual' as source FROM crop_plans WHERE status='active'`).all()
+  const autoPlans = db.prepare(`SELECT plotId as id, crop, 1 as plotCount, harvestAt, 'auto' as source FROM auto_crop_plans WHERE status='active'`).all()
+  const plans = [...autoPlans, ...manualPlans].sort((a,b)=>new Date(a.harvestAt)-new Date(b.harvestAt))
   for (const p of plans) {
     const harvest = new Date(p.harvestAt).getTime()
-    const beforeKey = `before:${p.id}:${beforeMin}`
+    const beforeKey = `before:${p.source}:${p.id}:${beforeMin}`
     if (beforeMin > 0 && !logged(beforeKey) && harvest - now > 0 && harvest - now <= beforeMin * 60_000) {
-      await sendTelegram(`🌻 ${p.crop} x${p.plotCount} ready in ~${Math.ceil((harvest-now)/60000)} min. Plan #${p.id}`); log(beforeKey)
+      await sendTelegram(`🌻 ${p.crop} x${p.plotCount} ready in ~${Math.ceil((harvest-now)/60000)} min. ${p.source === 'auto' ? 'Auto plot' : 'Plan'} #${p.id}`); log(beforeKey)
     }
-    const readyKey = `ready:${p.id}`
+    const readyKey = `ready:${p.source}:${p.id}`
     if (remindReady && !logged(readyKey) && harvest <= now) {
-      await sendTelegram(`🌻 ${p.crop} x${p.plotCount} ready to harvest. Plan #${p.id}`); log(readyKey)
+      await sendTelegram(`🌻 ${p.crop} x${p.plotCount} ready to harvest. ${p.source === 'auto' ? 'Auto plot' : 'Plan'} #${p.id}`); log(readyKey)
     }
   }
   const daily = setting('dailyReminderTime','')
