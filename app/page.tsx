@@ -5,6 +5,7 @@ import { CROPS, getCrop, profitPerHour } from './lib/crops'
 import { RECIPES, missingFor } from './lib/crafting'
 import { sendTelegram } from './lib/notify'
 import { buildCoach, buildPlaybook } from './lib/coach'
+import { parseFarm } from './lib/farmStatus'
 
 async function loginAction(formData: FormData) { 'use server'; if (await login(String(formData.get('password')||''))) redirect('/'); redirect('/?bad=1') }
 async function logoutAction() { 'use server'; await logout(); redirect('/') }
@@ -41,9 +42,10 @@ export default async function Page({ searchParams }: { searchParams?: Promise<Re
   const inventory = store.inventory()
   const targets = store.targets()
   const invMap = Object.fromEntries(inventory.map(i => [i.name, i.qty]))
-  const coach = buildCoach(autoPlans, inventory, targets, settings)
-  const playbook = buildPlaybook(autoPlans, inventory, targets, settings)
   const snapshot = store.latestSnapshot()
+  const coach = buildCoach(autoPlans, inventory, targets, settings, snapshot)
+  const playbook = buildPlaybook(autoPlans, inventory, targets, settings, snapshot)
+  const farmStatus = parseFarm(snapshot)
   const now = Date.now()
   return <main className="wrap">
     <div className="hero"><div><div className="big">🌻 Sunflower Helper</div><div className="muted">Dashboard sederhana untuk timer panen, reminder Telegram, inventory, dan target crafting.</div><div className="muted">Farm ID: {settings.farmId || process.env.SUNFLOWER_FARM_ID || 'not set'}</div></div><form action={logoutAction}><button className="danger">Logout</button></form></div>
@@ -54,6 +56,7 @@ export default async function Page({ searchParams }: { searchParams?: Promise<Re
     </div>
     {(await searchParams)?.telegram === 'ok' && <section className="card ok" style={{marginTop:14}}>Telegram test sent.</section>}
     {(await searchParams)?.telegram === 'fail' && <section className="card warn" style={{marginTop:14}}>Telegram test failed. Check token/chat ID.</section>}
+    <section className="card compact" style={{marginTop:14}}><h2>Detail: Cooking / Resources / Delivery</h2><div className="grid"><div className="pill">Cooking ready: {farmStatus.cooking.filter(c=>c.ready).length}</div><div className="pill">Resources ready: {farmStatus.resources.filter(r=>r.ready).length}</div><div className="pill">Open delivery: {farmStatus.deliveries.filter(d=>!d.completed).length}</div><div className="pill">Open chores: {farmStatus.chores.length}</div></div></section>
     <section className="card compact" style={{marginTop:14}}><h2>Detail: Auto harvest timers</h2><p className="muted">Ini dibaca otomatis dari Sunflower Land API. Tidak perlu input manual.</p>{autoPlans.length===0?<p className="muted">Belum ada crop aktif terbaca dari API.</p>:<table><thead><tr><th>Crop</th><th>Plot</th><th>ETA</th><th>Synced</th></tr></thead><tbody>{autoPlans.map(p=>{const ms=new Date(p.harvestAt).getTime()-now;const ready=ms<=0;return <tr key={p.plotId}><td>{p.crop}</td><td>{p.plotId}</td><td className={ready?'ok':''}>{ready?'Ready':`${Math.ceil(ms/60000)} min`}</td><td>{new Date(p.updatedAt).toLocaleTimeString()}</td></tr>})}</tbody></table>}</section>
     <section className="card" style={{marginTop:14}}><h2>Manual fallback timers</h2><p className="muted">Timer manual opsional kalau diperlukan.</p>{plans.length===0?<p className="muted">No manual timers.</p>:<table><thead><tr><th>Crop</th><th>Plots</th><th>ETA</th><th>Profit est.</th><th></th></tr></thead><tbody>{plans.map(p=>{const c=getCrop(p.crop);const ms=new Date(p.harvestAt).getTime()-now;const ready=ms<=0;return <tr key={p.id}><td>{p.crop}</td><td>{p.plotCount}</td><td className={ready?'ok':''}>{ready?'Ready':`${Math.ceil(ms/60000)} min`}</td><td>{((c.sell-c.seed)*p.plotCount).toFixed(2)} SFL</td><td><form action={markDone}><input type="hidden" name="id" value={p.id}/><button>Done</button></form></td></tr>})}</tbody></table>}</section>
     <section className="card compact" style={{marginTop:14}}><h2>Detail: Auto inventory & seed stock</h2><p className="muted">Inventory sekarang di-sync otomatis dari API farm. Input manual hanya fallback override.</p><form action={saveInventory} className="row"><input name="name" placeholder="Manual override item"/><input name="qty" type="number" step="0.01" placeholder="Qty"/><button>Override</button></form><div className="grid" style={{marginTop:12}}>{inventory.length===0?<p className="muted">No inventory yet.</p>:inventory.filter(i=>Number(i.qty)>0).slice(0,80).map(i=><div className="pill" key={i.name}>{i.name}: {i.qty}</div>)}</div></section>

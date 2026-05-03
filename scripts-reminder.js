@@ -36,6 +36,21 @@ function log(key){ db.prepare('INSERT OR REPLACE INTO reminder_log(key,sentAt) V
       await sendTelegram(`🌻 ${p.crop} x${p.plotCount} ready to harvest. ${p.source === 'auto' ? 'Auto plot' : 'Plan'} #${p.id}`); log(readyKey)
     }
   }
+
+  const snap = db.prepare('SELECT json FROM farm_snapshots ORDER BY id DESC LIMIT 1').get()
+  if (snap) {
+    const farm = JSON.parse(snap.json).farm || JSON.parse(snap.json)
+    const nowMs = Date.now()
+    const resources=[]
+    const add=(type,nodes,field,base)=>{ if(!nodes) return; for(const [id,node] of Object.entries(nodes)){ const t=Number((node[field]||{}).choppedAt || (node[field]||{}).minedAt || 0); const boost=Number((node[field]||{}).boostedTime||0); const readyAt=t+base-boost; if(t&&readyAt<=nowMs) resources.push(`${type}:${id}`) } }
+    add('Tree', farm.trees, 'wood', 2*60*60*1000); add('Stone', farm.stones, 'stone', 4*60*60*1000); add('Iron', farm.iron, 'stone', 8*60*60*1000); add('Gold', farm.gold, 'stone', 24*60*60*1000)
+    if (resources.length && !logged(`resources:${resources.join(',')}`)) { await sendTelegram(`🌻 Resources ready: ${resources.length} node(s) — pohon/batu/ore siap diambil.`); log(`resources:${resources.join(',')}`) }
+    const cooking=[]; for(const [building,arr] of Object.entries(farm.buildings||{})){ if(Array.isArray(arr)) for(const b of arr) for(const c of (b.crafting||[])) if(Number(c.readyAt||0)<=nowMs) cooking.push(`${c.name} (${building})`) }
+    if (cooking.length && !logged(`cooking:${cooking.join(',')}`)) { await sendTelegram(`🍳 Masakan ready: ${cooking.join(', ')}`); log(`cooking:${cooking.join(',')}`) }
+    const open=(farm.delivery?.orders||[]).filter(o=>!o.completedAt)
+    if (open.length && !logged(`delivery:${open.map(o=>o.id).join(',')}`)) { await sendTelegram(`📦 Delivery tersedia: ${open.map(o=>`${o.from}: ${Object.entries(o.items||{}).map(([k,v])=>`${v} ${k}`).join(', ')}`).join(' | ')}`); log(`delivery:${open.map(o=>o.id).join(',')}`) }
+  }
+
   const daily = setting('dailyReminderTime','')
   if (daily) {
     const d = new Date(); const hhmm = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; const key = `daily:${d.toISOString().slice(0,10)}:${daily}`
