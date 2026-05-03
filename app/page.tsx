@@ -4,6 +4,7 @@ import { missingFor } from './lib/crafting'
 import { buildPlaybook } from './lib/coach'
 import { serverNow } from './lib/farmStatus'
 import { buildSimpleGuide } from './lib/simpleGuide'
+import { getTodayStats, getProfitTrend } from './lib/profit-tracker'
 
 import { LoginPage } from './components/login-page'
 import { HeroHeader } from './components/hero-header'
@@ -17,6 +18,14 @@ import { CraftingPanel } from './components/crafting-panel'
 import { CropReference } from './components/crop-reference'
 import { SettingsPanel } from './components/settings-panel'
 import { Toasts } from './components/toast'
+import { ProductionOptimizer } from './components/production-optimizer'
+import { MRPPanel } from './components/mrp-panel'
+import { FarmTimeline } from './components/farm-timeline'
+import { ProfitTrackerPanel } from './components/profit-tracker-panel'
+import { EnergyPanel } from './components/energy-panel'
+import { GoalsPanel } from './components/goals-panel'
+import { QuestTracker } from './components/quest-tracker'
+import { BuildingPlanner } from './components/building-planner'
 
 export default async function Page({ searchParams }: { searchParams?: Promise<Record<string, string>> }) {
   const params = await searchParams
@@ -48,6 +57,20 @@ export default async function Page({ searchParams }: { searchParams?: Promise<Re
   const goalLabel = settings.goal || 'balanced'
   const farmId = settings.farmId || process.env.SUNFLOWER_FARM_ID || ''
 
+  // Profit tracker data
+  const profitTrendRaw = store.profitTrend(7)
+  const todayStats = store.todayStats()
+  const trendByDate = new Map<string, { date: string; sfl: number; crops: number; deliveries: number }>()
+  for (const r of profitTrendRaw) {
+    const d = r.ts.slice(0, 10)
+    if (!trendByDate.has(d)) trendByDate.set(d, { date: d, sfl: 0, crops: 0, deliveries: 0 })
+    const t = trendByDate.get(d)!
+    t.sfl += r.sflEarned
+    t.crops += r.cropsHarvested
+    t.deliveries += r.deliveriesDone
+  }
+  const profitTrend = Array.from(trendByDate.values()).sort((a, b) => a.date.localeCompare(b.date))
+
   return (
     <main className="wrap">
       <HeroHeader farmId={farmId} goalLabel={goalLabel} syncAgeMin={syncAgeMin} />
@@ -59,6 +82,28 @@ export default async function Page({ searchParams }: { searchParams?: Promise<Re
       />
       <FocusedRoute title={simpleGuide.main.title} where={simpleGuide.main.where} why={simpleGuide.main.why} done={simpleGuide.main.done} steps={simpleGuide.steps} />
       <PlaybookSection title={playbook.title} summary={playbook.summary} steps={playbook.steps} nextCheck={playbook.nextCheck} />
+
+      {/* NEW FEATURES */}
+      <div className="featuresGrid">
+        <ProductionOptimizer autoPlans={autoPlans} inventory={inventory} targets={targets} settings={settings} now={now} />
+        <FarmTimeline autoPlans={autoPlans} snapshot={snapshot} now={now} />
+      </div>
+
+      <div className="featuresGrid">
+        <MRPPanel targets={targets} inventory={inventory} />
+        <ProfitTrackerPanel data={{ today: todayStats, trend: profitTrend }} />
+      </div>
+
+      <div className="featuresGrid">
+        <EnergyPanel snapshot={snapshot} goal={goalLabel} />
+        <GoalsPanel inventory={inventory} targets={targets} autoPlans={autoPlans} />
+      </div>
+
+      <div className="featuresGrid">
+        <QuestTracker snapshot={snapshot} inventory={inventory} />
+        <BuildingPlanner snapshot={snapshot} inventory={inventory} />
+      </div>
+
       <SettingsPanel settings={settings} snapshot={snapshot} />
       <Toasts telegram={params?.telegram} />
       <StatusBoard status={farmStatus} />

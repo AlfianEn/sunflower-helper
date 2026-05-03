@@ -20,7 +20,25 @@ CREATE TABLE IF NOT EXISTS inventory (name TEXT PRIMARY KEY, qty REAL NOT NULL D
 CREATE TABLE IF NOT EXISTS craft_targets (id INTEGER PRIMARY KEY AUTOINCREMENT,item TEXT NOT NULL,qty REAL NOT NULL DEFAULT 1,status TEXT NOT NULL DEFAULT 'active',notes TEXT,createdAt TEXT NOT NULL,updatedAt TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS auto_crop_plans (plotId TEXT PRIMARY KEY, crop TEXT NOT NULL, plantedAt TEXT, harvestAt TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'active', raw TEXT NOT NULL, updatedAt TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS farm_snapshots (id INTEGER PRIMARY KEY AUTOINCREMENT, farmId TEXT NOT NULL, fetchedAt TEXT NOT NULL, json TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS profit_snapshots (id INTEGER PRIMARY KEY AUTOINCREMENT, ts TEXT NOT NULL, sflEarned REAL NOT NULL DEFAULT 0, cropsHarvested INTEGER NOT NULL DEFAULT 0, deliveriesDone INTEGER NOT NULL DEFAULT 0, itemsCrafted INTEGER NOT NULL DEFAULT 0, notes TEXT);
 `)
+
+function profitTrend(days: number = 7) {
+  const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString()
+  return db.prepare('SELECT ts, sflEarned, cropsHarvested, deliveriesDone FROM profit_snapshots WHERE ts >= ? ORDER BY ts ASC').all(cutoff) as { ts: string; sflEarned: number; cropsHarvested: number; deliveriesDone: number }[]
+}
+
+function todayStats() {
+  const today = new Date().toISOString().slice(0, 10)
+  const rows = db.prepare("SELECT * FROM profit_snapshots WHERE ts >= ?").all(today) as { sflEarned: number; cropsHarvested: number; deliveriesDone: number; itemsCrafted: number }[]
+  return {
+    sflEarned: rows.reduce((s, r) => s + r.sflEarned, 0),
+    cropsHarvested: rows.reduce((s, r) => s + r.cropsHarvested, 0),
+    deliveriesDone: rows.reduce((s, r) => s + r.deliveriesDone, 0),
+    itemsCrafted: rows.reduce((s, r) => s + r.itemsCrafted, 0),
+  }
+}
+
 export const store = {
   settings(): Record<string, string> { return Object.fromEntries((db.prepare('SELECT key,value FROM settings').all() as Setting[]).map(r => [r.key, r.value])) },
   setSetting(key: string, value: string) { const now = new Date().toISOString(); db.prepare('INSERT INTO settings(key,value,updatedAt) VALUES(?,?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value, updatedAt=excluded.updatedAt').run(key, value, now) },
@@ -33,5 +51,11 @@ export const store = {
   targets(): CraftTarget[] { return db.prepare("SELECT * FROM craft_targets WHERE status='active' ORDER BY createdAt DESC").all() as CraftTarget[] },
   addTarget(item: string, qty: number, notes?: string | null) { const now = new Date().toISOString(); db.prepare('INSERT INTO craft_targets(item,qty,status,notes,createdAt,updatedAt) VALUES(?,?,?,?,?,?)').run(item, qty, 'active', notes ?? null, now, now) },
   doneTarget(id: number) { db.prepare("UPDATE craft_targets SET status='done', updatedAt=? WHERE id=?").run(new Date().toISOString(), id) },
-  latestSnapshot(): FarmSnapshot | null { return db.prepare('SELECT * FROM farm_snapshots ORDER BY id DESC LIMIT 1').get() as FarmSnapshot | undefined ?? null }
+  latestSnapshot(): FarmSnapshot | null { return db.prepare('SELECT * FROM farm_snapshots ORDER BY id DESC LIMIT 1').get() as FarmSnapshot | undefined ?? null },
+  profitTrend,
+  todayStats,
+  recordProfit(data: { sflEarned: number; cropsHarvested: number; deliveriesDone: number; itemsCrafted: number; notes?: string }) {
+    db.prepare('INSERT INTO profit_snapshots(ts, sflEarned, cropsHarvested, deliveriesDone, itemsCrafted, notes) VALUES(?,?,?,?,?,?)')
+      .run(new Date().toISOString(), data.sflEarned, data.cropsHarvested, data.deliveriesDone, data.itemsCrafted, data.notes ?? null)
+  }
 }
