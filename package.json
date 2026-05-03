@@ -4,7 +4,8 @@
     "build": "next build",
     "start": "next start -p 3050",
     "lint": "eslint",
-    "reminder": "node scripts-reminder.js"
+    "reminder": "node scripts-reminder.js",
+    "sync-data": "node scripts-sync-data.js"
   },
   "dependencies": {
     "bcryptjs": "latest",
