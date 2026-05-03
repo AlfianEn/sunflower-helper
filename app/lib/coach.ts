@@ -1,49 +1,44 @@
-import { CROPS, getCrop, profitPerHour } from './crops'
+import { CROPS, profitPerHour } from './crops'
 import { missingFor } from './crafting'
 import type { AutoCropPlan, InventoryItem, CraftTarget } from './db'
 
 export type CoachAction = { title: string; detail: string; priority: 'urgent' | 'high' | 'medium' | 'low'; tag?: string }
+export type PlaybookStep = { label: string; detail: string; doneWhen?: string }
+export type Playbook = { title: string; summary: string; steps: PlaybookStep[]; nextCheck: string; mode: string }
 const seedName = (crop: string) => `${crop} Seed`
 const qty = (inv: Record<string, number>, name: string) => Number(inv[name] || 0)
-
+const group = (plans: AutoCropPlan[]) => plans.reduce<Record<string, number>>((a,p)=>(a[p.crop]=(a[p.crop]||0)+1,a),{})
+const fmtGroup = (g: Record<string, number>) => Object.entries(g).map(([k,v])=>`${v} ${k}`).join(', ')
+function bestPlant(inv: Record<string, number>, goal: string, targets: CraftTarget[]) {
+  const craftNeed = targets.flatMap(t => missingFor(t.item, t.qty, inv).filter(m => m.missing > 0)).find(m => CROPS.some(c => c.name === m.name))
+  const candidates = CROPS.map(c => ({...c, seeds: qty(inv, seedName(c.name)), pph: profitPerHour(c)})).filter(c => c.seeds > 0)
+  if (goal === 'craft' && craftNeed) return candidates.find(c => c.name === craftNeed.name) || candidates[0]
+  return candidates.sort((a,b)=>b.pph-a.pph)[0]
+}
+export function buildPlaybook(autoPlans: AutoCropPlan[], inventory: InventoryItem[], targets: CraftTarget[], settings: Record<string,string> = {}): Playbook {
+  const now = Date.now(); const goal = settings.goal || 'balanced'; const inv = Object.fromEntries(inventory.map(i => [i.name, Number(i.qty)]))
+  const plots = Math.max(0, qty(inv, 'Crop Plot')); const ready = autoPlans.filter(p=>new Date(p.harvestAt).getTime()<=now); const active = autoPlans.filter(p=>new Date(p.harvestAt).getTime()>now)
+  const freePlots = Math.max(0, plots - active.length)
+  const steps: PlaybookStep[] = []
+  if (ready.length) steps.push({ label:`Harvest ${ready.length} plot`, detail:`Harvest: ${fmtGroup(group(ready))}.`, doneWhen:'Semua plot ready sudah kosong/terpanen.' })
+  const plant = bestPlant(inv, goal, targets)
+  const plantSlots = ready.length + freePlots
+  if (plantSlots > 0 && plant) {
+    const amount = Math.min(plantSlots, Math.floor(plant.seeds))
+    if (amount > 0) steps.push({ label:`Tanam ${amount} ${plant.name}`, detail:`Pakai ${amount} ${seedName(plant.name)}. Mode ${goal}.`, doneWhen:`${amount} plot sudah ditanami ${plant.name}.` })
+    if (amount < plantSlots) steps.push({ label:`Beli ${plantSlots - amount} seed tambahan`, detail:`Seed ${plant.name} kurang. Beli di Market lalu tanam sisa plot.`, doneWhen:'Tidak ada plot kosong.' })
+  } else if (plantSlots > 0) steps.push({ label:'Beli seed dulu', detail:`Ada ${plantSlots} plot kosong tapi seed tidak cukup/terbaca. Buka Market dan beli seed.`, doneWhen:'Seed tersedia lalu tanam.' })
+  const invMap = inv
+  const missingTargets = targets.flatMap(t => missingFor(t.item, t.qty, invMap).filter(m=>m.missing>0).map(m=>({target:t.item,...m})))
+  if (targets.length && missingTargets.length === 0) steps.push({ label:`Craft ${targets[0].item}`, detail:'Bahan terlihat cukup. Buka crafting/building terkait dan craft target.', doneWhen:'Target craft selesai.' })
+  else if (missingTargets.length) { const m=missingTargets[0]; steps.push({ label:`Farm bahan ${m.name}`, detail:`Kurang ${m.missing} untuk ${m.target}. Jangan pecah fokus ke craft lain dulu.`, doneWhen:`${m.name} cukup.` }) }
+  steps.push({ label:'Daily quick check', detail:'Cek Daily Reward, Chores, Delivery, Compost/Animals, dan resource nodes.', doneWhen:'Checklist harian selesai.' })
+  const next = active.sort((a,b)=>new Date(a.harvestAt).getTime()-new Date(b.harvestAt).getTime())[0]
+  const nextCheck = next ? `${Math.ceil((new Date(next.harvestAt).getTime()-now)/60000)} menit lagi (${next.crop})` : 'setelah tanam crop baru'
+  const title = ready.length ? 'Sekarang: Harvest + Replant' : plantSlots > 0 ? 'Sekarang: Isi plot kosong' : 'Sekarang: Tunggu next harvest + daily'
+  return { title, summary:`Goal: ${goal}. Crop aktif: ${active.length}. Ready: ${ready.length}. Plot kosong/siap isi: ${plantSlots}.`, steps: steps.slice(0,6), nextCheck, mode: goal }
+}
 export function buildCoach(autoPlans: AutoCropPlan[], inventory: InventoryItem[], targets: CraftTarget[], settings: Record<string,string> = {}): CoachAction[] {
-  const now = Date.now()
-  const inv = Object.fromEntries(inventory.map(i => [i.name, Number(i.qty)]))
-  const actions: CoachAction[] = []
-  const goal = settings.goal || 'balanced'
-  const cropPlots = Math.max(0, qty(inv, 'Crop Plot'))
-  const occupied = autoPlans.length
-  const freePlots = Math.max(0, cropPlots - occupied)
-  const ready = autoPlans.filter(p => new Date(p.harvestAt).getTime() <= now)
-  if (ready.length) {
-    const grouped = ready.reduce<Record<string, number>>((a,p)=>(a[p.crop]=(a[p.crop]||0)+1,a),{})
-    actions.push({ priority: 'urgent', tag:'HARVEST', title: `Harvest sekarang: ${ready.length} plot`, detail: Object.entries(grouped).map(([k,v])=>`${k} x${v}`).join(', ') })
-  }
-  if (freePlots > 0) {
-    const candidates = CROPS.map(c => ({...c, seeds: qty(inv, seedName(c.name)), pph: profitPerHour(c)})).filter(c => c.seeds > 0)
-    const craftNeed = targets.flatMap(t => missingFor(t.item, t.qty, inv).filter(m => m.missing > 0)).find(m => CROPS.some(c => c.name === m.name))
-    let pick = candidates.sort((a,b)=>b.pph-a.pph)[0]
-    if (goal === 'craft' && craftNeed) pick = candidates.find(c => c.name === craftNeed.name) || pick
-    if (pick) actions.push({ priority:'urgent', tag:'PLANT', title:`Tanam ${pick.name} di ${Math.min(freePlots, Math.floor(pick.seeds))} plot kosong`, detail:`Ada ${freePlots} plot kosong dan ${pick.seeds} ${seedName(pick.name)}. Mode: ${goal}.` })
-    else actions.push({ priority:'high', tag:'BUY_SEED', title:`Beli seed dulu`, detail:`Ada ${freePlots} plot kosong tapi seed stock tidak terbaca/cukup. Buka Market dan beli seed sesuai target.` })
-  }
-  const soon = autoPlans.filter(p => { const ms = new Date(p.harvestAt).getTime()-now; return ms>0 && ms<=10*60_000 })
-  if (soon.length) actions.push({ priority: 'high', tag:'WAIT', title: `${soon.length} plot ready <10 menit`, detail: 'Tunggu sebentar, lalu harvest dan tanam ulang.' })
-  const missingTargets = targets.flatMap(t => missingFor(t.item, t.qty, inv).filter(m => m.missing > 0).map(m => ({ target: t.item, ...m })))
-  if (missingTargets.length) {
-    const m = missingTargets.sort((a,b)=>b.missing-a.missing)[0]
-    actions.push({ priority: 'high', tag:'CRAFT_MATERIAL', title: `Fokus bahan: ${m.name}`, detail: `Kurang ${m.missing} untuk ${m.target}. Jangan craft target lain dulu.` })
-  } else if (targets.length) {
-    actions.push({ priority: 'high', tag:'CRAFT', title: 'Craft target sekarang', detail: `Bahan untuk ${targets[0].item} terlihat cukup. Buka game dan craft.` })
-  }
-  const active = autoPlans.filter(p => new Date(p.harvestAt).getTime() > now)
-  if (active.length) {
-    const next = active[0]
-    const min = Math.ceil((new Date(next.harvestAt).getTime()-now)/60000)
-    actions.push({ priority: 'medium', tag:'NEXT', title: `Next harvest: ${next.crop}`, detail: `Sekitar ${min} menit lagi. Bot akan remind otomatis.` })
-  }
-  const dailyChecks = ['Daily Reward','Chores','Delivery','Compost','Animals','Resource nodes']
-  actions.push({ priority:'medium', tag:'DAILY', title:'Daily checklist', detail: dailyChecks.join(' · ') })
-  if (!autoPlans.length) actions.unshift({ priority: 'urgent', tag:'SYNC', title: 'Tidak ada crop aktif terbaca', detail: 'Kalau farm kosong, tanam crop. Kalau tidak kosong, tekan sync/tunggu API update.' })
-  return actions.slice(0,8)
+  const p = buildPlaybook(autoPlans, inventory, targets, settings)
+  return p.steps.map((s,i)=>({priority:i===0?'urgent':'high', title:s.label, detail:s.detail, tag:`STEP ${i+1}`}))
 }
