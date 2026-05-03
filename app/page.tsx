@@ -6,6 +6,8 @@ import { serverNow } from './lib/farmStatus'
 import { buildSimpleGuide } from './lib/simpleGuide'
 import { buildSmartAlerts } from './lib/smart-notify'
 import { generateWeeklyReport } from './lib/weekly-report'
+import { calculateSFLRate } from './lib/sfl-tracker'
+import { calculateSeedROI } from './lib/seed-roi'
 
 import { LoginPage } from './components/login-page'
 import { HeroHeader } from './components/hero-header'
@@ -37,6 +39,13 @@ import { CompostPanel } from './components/compost-panel'
 import { ExpansionPanel } from './components/expansion-panel'
 import { WeeklyReportPanel } from './components/weekly-report-panel'
 import { BotCommandsPanel } from './components/bot-commands-panel'
+import { SFLTrackerPanel } from './components/sfl-tracker-panel'
+import { SeedROIPanel } from './components/seed-roi-panel'
+import { NPCPanel } from './components/npc-panel'
+import { WearablesPanel } from './components/wearables-panel'
+import { ExportPanel } from './components/export-panel'
+import { KeyboardHelp } from './components/keyboard-shortcuts'
+import { SkeletonCard } from './components/skeleton'
 
 export default async function Page({ searchParams }: { searchParams?: Promise<Record<string, string>> }) {
   const params = await searchParams
@@ -68,7 +77,7 @@ export default async function Page({ searchParams }: { searchParams?: Promise<Re
   const goalLabel = settings.goal || 'balanced'
   const farmId = settings.farmId || process.env.SUNFLOWER_FARM_ID || ''
 
-  // Profit tracker data
+  // Data
   const profitTrendRaw = store.profitTrend(7)
   const todayStats = store.todayStats()
   const trendByDate = new Map<string, { date: string; sfl: number; crops: number; deliveries: number }>()
@@ -82,14 +91,11 @@ export default async function Page({ searchParams }: { searchParams?: Promise<Re
   }
   const profitTrend = Array.from(trendByDate.values()).sort((a, b) => a.date.localeCompare(b.date))
 
-  // Smart alerts & activity
   const smartAlerts = buildSmartAlerts(snapshot, autoPlans, inventory, targets)
   const recentActivity = store.recentActivity(15)
   const totalSnapshots = store.totalSnapshots()
-
-  // Weekly report
-  const weeklyProfits = store.profitTrend(7)
-  const weeklyReport = generateWeeklyReport(weeklyProfits as any, recentActivity as any)
+  const weeklyReport = generateWeeklyReport(profitTrendRaw as any, recentActivity as any)
+  const sflProfits = profitTrendRaw.map(p => ({ ts: p.ts, sflEarned: p.sflEarned }))
 
   return (
     <main className="wrap">
@@ -100,59 +106,91 @@ export default async function Page({ searchParams }: { searchParams?: Promise<Re
         nextCheck={playbook.nextCheck}
         metrics={{ criticalCount, activeCropCount: activeCrops.length, readyCropCount: readyCrops.length, nextCrop, inventoryTypes: positiveInventory.length, seedTypes: seedStock.length, inventoryQty, craftGaps: targetGaps.length, activeTargets: targets.length }}
       />
-      <SmartAlertsPanel alerts={smartAlerts} />
-      <FocusedRoute title={simpleGuide.main.title} where={simpleGuide.main.where} why={simpleGuide.main.why} done={simpleGuide.main.done} steps={simpleGuide.steps} />
-      <PlaybookSection title={playbook.title} summary={playbook.summary} steps={playbook.steps} nextCheck={playbook.nextCheck} />
 
-      {/* CORE FEATURES */}
-      <div className="featuresGrid">
+      {/* TAB NAVIGATION */}
+      <nav className="tabNav">
+        <a href="#overview" className="tabBtn active" data-tab="overview"><span className="tabIcon">🌻</span><span className="tabLabel">Overview</span></a>
+        <a href="#production" className="tabBtn" data-tab="production"><span className="tabIcon">🌾</span><span className="tabLabel">Production</span></a>
+        <a href="#analytics" className="tabBtn" data-tab="analytics"><span className="tabIcon">📊</span><span className="tabLabel">Analytics</span></a>
+        <a href="#tools" className="tabBtn" data-tab="tools"><span className="tabIcon">🔧</span><span className="tabLabel">Tools</span></a>
+        <a href="#settings" className="tabBtn" data-tab="settings"><span className="tabIcon">⚙️</span><span className="tabLabel">Settings</span></a>
+      </nav>
+
+      {/* OVERVIEW TAB */}
+      <div data-tab="overview" className="tabPanel">
+        <SmartAlertsPanel alerts={smartAlerts} />
+        <FocusedRoute title={simpleGuide.main.title} where={simpleGuide.main.where} why={simpleGuide.main.why} done={simpleGuide.main.done} steps={simpleGuide.steps} />
+        <PlaybookSection title={playbook.title} summary={playbook.summary} steps={playbook.steps} nextCheck={playbook.nextCheck} />
+        <StatusBoard status={farmStatus} />
+        <CropTimers autoPlans={autoPlans} manualPlans={plans} now={now} />
+      </div>
+
+      {/* PRODUCTION TAB */}
+      <div data-tab="production" className="tabPanel" style={{ display: 'none' }}>
         <ProductionOptimizer autoPlans={autoPlans} inventory={inventory} targets={targets} settings={settings} now={now} />
         <FarmTimeline autoPlans={autoPlans} snapshot={snapshot} now={now} />
-      </div>
-
-      <div className="featuresGrid">
         <MRPPanel targets={targets} inventory={inventory} />
-        <ProfitTrackerPanel data={{ today: todayStats, trend: profitTrend }} />
-      </div>
-
-      <div className="featuresGrid">
         <EnergyPanel snapshot={snapshot} goal={goalLabel} />
-        <EfficiencyPanel snapshot={snapshot} autoPlans={autoPlans} inventory={inventory} />
-      </div>
-
-      <div className="featuresGrid">
-        <GoalsPanel inventory={inventory} targets={targets} autoPlans={autoPlans} />
         <QuestTracker snapshot={snapshot} inventory={inventory} />
-      </div>
-
-      <div className="featuresGrid">
         <BuildingPlanner snapshot={snapshot} inventory={inventory} />
         <ExpansionPanel inventory={inventory} />
-      </div>
-
-      <div className="featuresGrid">
         <FishingPanel snapshot={snapshot} />
         <CompostPanel snapshot={snapshot} />
       </div>
 
-      <div className="featuresGrid">
-        <SeasonalEventsPanel />
-        <SyncDashboard snapshot={snapshot} farmId={farmId} totalSnapshots={totalSnapshots} />
-      </div>
-
-      <div className="featuresGrid">
+      {/* ANALYTICS TAB */}
+      <div data-tab="analytics" className="tabPanel" style={{ display: 'none' }}>
+        <ProfitTrackerPanel data={{ today: todayStats, trend: profitTrend }} />
+        <SFLTrackerPanel profits={sflProfits} />
+        <EfficiencyPanel snapshot={snapshot} autoPlans={autoPlans} inventory={inventory} />
+        <SeedROIPanel />
+        <GoalsPanel inventory={inventory} targets={targets} autoPlans={autoPlans} />
         <WeeklyReportPanel report={weeklyReport} />
         <ActivityLogPanel activities={recentActivity} />
       </div>
 
-      <BotCommandsPanel />
-      <SettingsPanel settings={settings} snapshot={snapshot} />
+      {/* TOOLS TAB */}
+      <div data-tab="tools" className="tabPanel" style={{ display: 'none' }}>
+        <InventoryPanel inventory={inventory} />
+        <CraftingPanel targets={targets} invMap={invMap} />
+        <CropReference />
+        <NPCPanel snapshot={snapshot} />
+        <WearablesPanel snapshot={snapshot} />
+        <SeasonalEventsPanel />
+        <SyncDashboard snapshot={snapshot} farmId={farmId} totalSnapshots={totalSnapshots} />
+        <BotCommandsPanel />
+        <ExportPanel inventory={inventory} activities={recentActivity} profits={profitTrendRaw} />
+      </div>
+
+      {/* SETTINGS TAB */}
+      <div data-tab="settings" className="tabPanel" style={{ display: 'none' }}>
+        <SettingsPanel settings={settings} snapshot={snapshot} />
+        <KeyboardHelp />
+      </div>
+
       <Toasts telegram={params?.telegram} />
-      <StatusBoard status={farmStatus} />
-      <CropTimers autoPlans={autoPlans} manualPlans={plans} now={now} />
-      <InventoryPanel inventory={inventory} />
-      <CraftingPanel targets={targets} invMap={invMap} />
-      <CropReference />
+
+      {/* TAB SWITCHING SCRIPT */}
+      <script dangerouslySetInnerHTML={{ __html: `
+        (function(){
+          var btns = document.querySelectorAll('.tabBtn');
+          var panels = document.querySelectorAll('.tabPanel');
+          function show(tab) {
+            btns.forEach(function(b){ b.classList.toggle('active', b.dataset.tab===tab) });
+            panels.forEach(function(p){ p.style.display = p.dataset.tab===tab ? '' : 'none' });
+          }
+          btns.forEach(function(b){
+            b.addEventListener('click', function(e){
+              e.preventDefault();
+              var tab = b.dataset.tab;
+              show(tab);
+              history.replaceState(null,'','#'+tab);
+            });
+          });
+          var hash = location.hash.slice(1);
+          if(hash) show(hash);
+        })()
+      `}} />
     </main>
   )
 }

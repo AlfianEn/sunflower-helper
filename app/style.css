@@ -69,3 +69,39 @@ ol{margin:0;padding-left:22px;line-height:1.8}h2{margin:0 0 8px}.card>p{margin-t
 .commandGrid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:10px}.commandCard{background:#0d120b;border:1px solid #405535;border-radius:12px;padding:10px;display:grid;gap:4px}.commandCard code{color:#f7c948;font-weight:700;font-size:14px}.commandCard span{font-size:12px;color:#b7c7aa}
 
 @media(max-width:560px){.syncGrid,.weeklyStats{grid-template-columns:1fr 1fr}.commandGrid{grid-template-columns:1fr}.gradeCircle{width:60px;height:60px}.gradeLetter{font-size:24px}}
+
+/* === TAB NAVIGATION === */
+.tabNav{display:flex;gap:4px;background:#0d120b;border:1px solid #405535;border-radius:16px;padding:6px;margin-top:14px;margin-bottom:14px;overflow-x:auto}.tabBtn{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:10px 12px;border:1px solid transparent;border-radius:12px;background:transparent;color:#9cae90;font-size:13px;font-weight:600;cursor:pointer;text-decoration:none;white-space:nowrap;transition:all .15s}.tabBtn:hover{background:#182015;color:#d7e5ca}.tabBtn.active{background:#f7c948;color:#241a00;border-color:#f7c948}.tabIcon{font-size:16px}.tabLabel{display:inline}@media(max-width:560px){.tabLabel{display:none}.tabBtn{padding:10px}.tabIcon{font-size:20px}}.tabPanel{animation:fadeIn .2s}@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+
+/* === COLLAPSIBLE === */
+.collapsible{margin-top:10px}.collapsibleHeader{display:flex;justify-content:space-between;align-items:center;width:100%;padding:12px 14px;background:#0d120b;border:1px solid #405535;border-radius:14px;color:#d7e5ca;font-size:14px;font-weight:600;cursor:pointer;transition:border-color .15s}.collapsibleHeader:hover{border-color:#f7c948}.collapsible.open .collapsibleHeader{border-radius:14px 14px 0 0;border-color:#f7c948}.collapsibleTitle{display:flex;align-items:center;gap:8px}.collapsibleIcon{font-size:16px}.collapsibleArrow{color:#f7c948;font-size:14px}.collapsibleBody{background:#0d120b;border:1px solid #405535;border-top:0;border-radius:0 0 14px 14px;padding:14px}
+
+/* === SEARCH BAR === */
+.searchBar{position:relative;margin:10px 0}.searchInput{width:100%;background:#0d120b;border:1px solid #405535;border-radius:12px;padding:10px 36px 10px 12px;color:#fff;font-size:14px}.searchInput:focus{border-color:#f7c948;outline:none}.searchClear{position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;color:#9cae90;cursor:pointer;font-size:16px}
+
+/* === SFL TRACKER === */
+.sflMetrics{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:10px 0}.sflMetric{background:#0d120b;border:1px solid #405535;border-radius:12px;padding:10px;text-align:center}.sflLabel{font-size:11px;color:#9cae90;display:block}.sflValue{font-size:28px;color:#f7c948;display:block;line-height:1.2}.sflValue.peak{color:#86efac}.sflMetric small{font-size:10px;color:#7a8a6e}.sflProjections{display:flex;gap:12px;margin-top:10px;padding:10px;background:#0d120b;border-radius:10px}.projection{flex:1;display:flex;justify-content:space-between;font-size:13px}.projection b{color:#f7c948}
+
+/* === SEED ROI === */
+.roiHighlights{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:10px 0}.roiCard{background:#0d120b;border:1px solid #405535;border-radius:12px;padding:10px;text-align:center}.roiCard.best{border-color:#f7c948;background:#241a07}.roiBadge{font-size:10px;color:#9cae90;display:block;margin-bottom:4px}.roiCard b{color:#f7c948;display:block;font-size:16px}.roiCard span{font-size:12px;color:#b7c7aa}.roiTable{margin-top:10px;font-size:12px}.roiHeader{display:grid;grid-template-columns:30px 1fr 50px 50px 50px 60px 50px 50px;gap:4px;padding:8px;background:#0d120b;border-radius:8px;color:#9cae90;font-weight:700}.roiRow{display:grid;grid-template-columns:30px 1fr 50px 50px 50px 60px 50px 50px;gap:4px;padding:6px 8px;border-bottom:1px solid #1a2418}.roiRow.top{background:#241a07}.roiRow b{color:#f7c948}.pph{color:#86efac;font-weight:700}
+
+/* === NPC === */
+.npcGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px;margin-top:10px}.npcCard{background:#0d120b;border:1px solid #405535;border-radius:12px;padding:10px;display:grid;gap:4px}.npcIcon{font-size:20px}.npcInfo{display:flex;gap:6px;align-items:center}.npcInfo b{color:#f7c948;font-size:13px}.npcLevel{font-size:10px;color:#9cae90}.npcBar{height:4px;background:#1a2418;border-radius:2px;overflow:hidden}.npcBarFill{height:100%;background:#f7c948;border-radius:2px}.npcPoints{font-size:11px;color:#b7c7aa}.npcCard small{font-size:10px;color:#7a8a6e}
+
+/* === WEARABLES === */
+.wearableSection{margin-top:10px}.wearableSection h3{margin:0 0 8px;font-size:13px}.wearableGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:6px}.wearableCard{background:#0d120b;border:1px solid #405535;border-radius:10px;padding:8px;text-align:center}.wearableCard.equipped{border-color:#f7c948;background:#241a07}.wearableCard b{color:#f7c948;font-size:12px;display:block}.wearableCard span{font-size:10px;color:#9cae90}
+
+/* === EXPORT === */
+.exportGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}.exportBtn{background:#0d120b;border:1px solid #405535;border-radius:12px;padding:12px;color:#d7e5ca;font-size:13px;cursor:pointer;transition:all .15s}.exportBtn:hover{border-color:#f7c948;background:#241a07}
+
+/* === KEYBOARD SHORTCUTS === */
+.keyboardHelp{margin-top:10px}.keyboardHelp h3{margin:0 0 10px}.shortcutGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:6px}.shortcut{display:flex;align-items:center;gap:6px;padding:6px;background:#0d120b;border:1px solid #405535;border-radius:8px}kbd{background:#1a2418;border:1px solid #405535;border-radius:4px;padding:2px 6px;font-size:12px;color:#f7c948;font-family:monospace}.shortcut span{font-size:12px;color:#b7c7aa}
+
+/* === SYNC INDICATOR === */
+.syncIndicator{display:flex;align-items:center;gap:6px;padding:6px 10px;border-radius:20px;background:#0d120b;border:1px solid #405535;font-size:12px}.syncDot{width:8px;height:8px;border-radius:50%;background:#86efac}.syncIndicator.syncing .syncDot{background:#f7c948;animation:pulse 1s infinite}.syncIndicator.stale .syncDot{background:#fde68a}.syncText{color:#9cae90}@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* === SKELETON === */
+.skeleton{background:linear-gradient(90deg,#1a2418 25%,#243020 50%,#1a2418 75%);background-size:200% 100%;border-radius:8px;animation:shimmer 1.5s infinite}@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+
+/* === RESPONSIVE === */
+@media(max-width:560px){.sflMetrics,.roiHighlights{grid-template-columns:1fr 1fr}.exportGrid{grid-template-columns:1fr}.roiTable{overflow-x:auto}}
