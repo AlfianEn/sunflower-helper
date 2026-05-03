@@ -7,6 +7,7 @@ const farmId = process.env.SUNFLOWER_FARM_ID || '3132688624394422'
 const apiKey = process.env.SFL_API_KEY
 const dbPath = process.env.DB_PATH || path.join(process.cwd(), 'data', 'sunflower.db')
 const db = new Database(dbPath)
+const CROP_MINUTES = { Sunflower:1, Potato:5, Rhubarb:10, Pumpkin:30, Zucchini:30, Carrot:60, Yam:60, Cabbage:120, Broccoli:120, Soybean:180, Beetroot:240, Pepper:240, Cauliflower:480, Parsnip:720, Eggplant:960, Corn:1200, Onion:1200, Radish:1440, Wheat:1440, Turnip:1440, Kale:2160, Artichoke:2160, Barley:2880 }
 db.exec(`CREATE TABLE IF NOT EXISTS farm_snapshots (id INTEGER PRIMARY KEY AUTOINCREMENT, farmId TEXT NOT NULL, fetchedAt TEXT NOT NULL, json TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS auto_crop_plans (plotId TEXT PRIMARY KEY, crop TEXT NOT NULL, plantedAt TEXT, harvestAt TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'active', raw TEXT NOT NULL, updatedAt TEXT NOT NULL);`)
 function getJson(url) { return new Promise((resolve,reject)=>{ const req=https.request(url,{headers:{Authorization:`Bearer ${apiKey}`,'x-api-key':apiKey,Accept:'application/json'}},res=>{let data='';res.on('data',d=>data+=d);res.on('end',()=>{try{resolve({status:res.statusCode,json:JSON.parse(data)})}catch(e){reject(new Error(`bad json ${res.statusCode}: ${data.slice(0,120)}`))}})}); req.on('error',reject); req.end() }) }
@@ -34,8 +35,11 @@ function extractCropEntries(farm) {
       const name = crop.name
       const plantedAtMs = Number(crop.plantedAt || 0)
       const boostedTime = Number(crop.boostedTime || 0)
-      if (name && plantedAtMs && boostedTime) {
-        entries.push({ plotId, crop: String(name), plantedAt: new Date(plantedAtMs).toISOString(), harvestAt: new Date(plantedAtMs + boostedTime).toISOString(), raw: plot })
+      const baseMs = (CROP_MINUTES[name] || 0) * 60_000
+      if (name && plantedAtMs && baseMs) {
+        const startAt = plantedAtMs + boostedTime
+        const harvestAt = startAt + Math.max(baseMs - boostedTime, 0)
+        entries.push({ plotId, crop: String(name), plantedAt: new Date(plantedAtMs).toISOString(), harvestAt: new Date(harvestAt).toISOString(), raw: plot })
       }
     }
     return entries
