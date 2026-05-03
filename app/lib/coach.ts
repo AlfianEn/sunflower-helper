@@ -34,20 +34,24 @@ export function buildPlaybook(autoPlans: AutoCropPlan[], inventory: InventoryIte
   const missingTargets = targets.flatMap(t => missingFor(t.item, t.qty, invMap).filter(m=>m.missing>0).map(m=>({target:t.item,...m})))
   if (targets.length && missingTargets.length === 0) steps.push({ label:`Craft ${targets[0].item}`, detail:'Bahan terlihat cukup. Buka crafting/building terkait dan craft target.', doneWhen:'Target craft selesai.' })
   else if (missingTargets.length) { const m=missingTargets[0]; steps.push({ label:`Farm bahan ${m.name}`, detail:`Kurang ${m.missing} untuk ${m.target}. Jangan pecah fokus ke craft lain dulu.`, doneWhen:`${m.name} cukup.` }) }
+  const readyDaily = status.daily.filter(d=>d.ready)
+  if (readyDaily.length) steps.push({ label:'Ambil Daily Reward', detail:readyDaily.map(d=>d.name).join(', '), doneWhen:'Daily reward sudah di-claim.' })
   const readyCooking = status.cooking.filter(c=>c.ready)
-  if (readyCooking.length) steps.push({ label:`Ambil masakan ready (${readyCooking.length})`, detail: readyCooking.map(c=>`${c.name} di ${c.building}`).join(', '), doneWhen:'Semua masakan ready sudah diambil.' })
+  if (readyCooking.length) steps.push({ label:`Ambil masakan ready (${readyCooking.length})`, detail: readyCooking.map(c=>`${c.name} di ${c.detail || 'building'}`).join(', '), doneWhen:'Semua masakan ready sudah diambil.' })
   const readyResources = status.resources.filter(r=>r.ready)
   if (readyResources.length) { const g=readyResources.reduce<Record<string,number>>((a,r)=>(a[r.type]=(a[r.type]||0)+1,a),{}); steps.push({ label:`Ambil resource ready`, detail:Object.entries(g).map(([k,v])=>`${v} ${k}`).join(', '), doneWhen:'Pohon/batu/ore ready sudah diambil.' }) }
   const doableDeliveries = status.deliveries.filter(d=>!d.completed && d.fulfillable)
   const blockedDeliveries = status.deliveries.filter(d=>!d.completed && !d.fulfillable)
   if (doableDeliveries.length) steps.push({ label:`Kirim delivery (${doableDeliveries.length})`, detail: doableDeliveries.map(d=>`${d.from}: ${Object.entries(d.items).map(([k,v])=>`${v} ${k}`).join(', ')}`).join(' | '), doneWhen:'Delivery yang bisa dipenuhi sudah dikirim.' })
   else if (blockedDeliveries.length) steps.push({ label:`Jangan paksa delivery dulu`, detail: blockedDeliveries.map(d=>`${d.from} butuh ${Object.entries(d.items).map(([k,v])=>`${v} ${k}`).join(', ')}`).join(' | '), doneWhen:'Bahan delivery cukup.' })
-  if (status.chores.length) steps.push({ label:'Kerjakan chore yang nyambung', detail: status.chores.slice(0,4).join(' | '), doneWhen:'Progress chore harian bertambah.' })
-  steps.push({ label:'Daily quick check', detail:'Cek Daily Reward, Compost/Animals, dan event/seasonal task.', doneWhen:'Checklist harian selesai.' })
+  if (status.mushrooms.length) steps.push({ label:`Ambil mushroom (${status.mushrooms.length})`, detail: status.mushrooms.slice(0,5).map(m=>`${m.name} ${m.detail||''}`).join(', '), doneWhen:'Mushroom yang muncul sudah diambil.' })
+  if (status.animals.filter(a=>a.ready).length) steps.push({ label:`Cek animals (${status.animals.filter(a=>a.ready).length})`, detail: status.animals.filter(a=>a.ready).slice(0,5).map(a=>`${a.name} ${a.detail||''}`).join(', '), doneWhen:'Animal task yang tersedia sudah dicek.' })
+  if (status.chores.length) steps.push({ label:'Kerjakan chore yang nyambung', detail: status.chores.slice(0,4).map(c=>c.name).join(' | '), doneWhen:'Progress chore harian bertambah.' })
+  steps.push({ label:'Daily quick check', detail:'Cek event/seasonal task, fishing/crab trap, compost kalau sudah kebuka.', doneWhen:'Checklist harian selesai.' })
   const next = active.sort((a,b)=>new Date(a.harvestAt).getTime()-new Date(b.harvestAt).getTime())[0]
   const nextCheck = next ? `${Math.ceil((new Date(next.harvestAt).getTime()-now)/60000)} menit lagi (${next.crop})` : 'setelah tanam crop baru'
   const title = ready.length ? 'Sekarang: Harvest + Replant' : plantSlots > 0 ? 'Sekarang: Isi plot kosong' : 'Sekarang: Tunggu next harvest + daily'
-  return { title, summary:`Goal: ${goal}. Crop aktif: ${active.length}. Ready: ${ready.length}. Plot kosong/siap isi: ${plantSlots}.`, steps: steps.slice(0,6), nextCheck, mode: goal }
+  return { title, summary:`Goal: ${goal}. Crop aktif: ${active.length}. Ready: ${ready.length}. Plot kosong/siap isi: ${plantSlots}. Cooking:${status.summary.cookingReady} Resource:${status.summary.resourcesReady} Delivery:${status.summary.deliveriesDoable}.`, steps: steps.slice(0,8), nextCheck, mode: goal }
 }
 export function buildCoach(autoPlans: AutoCropPlan[], inventory: InventoryItem[], targets: CraftTarget[], settings: Record<string,string> = {}, snapshot: FarmSnapshot | null = null): CoachAction[] {
   const p = buildPlaybook(autoPlans, inventory, targets, settings, snapshot)
