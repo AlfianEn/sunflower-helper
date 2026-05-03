@@ -6,6 +6,7 @@ import { RECIPES, missingFor } from './lib/crafting'
 import { sendTelegram } from './lib/notify'
 import { buildCoach, buildPlaybook } from './lib/coach'
 import { formatEta, parseFarm } from './lib/farmStatus'
+import { buildSimpleGuide } from './lib/simpleGuide'
 
 async function loginAction(formData: FormData) { 'use server'; if (await login(String(formData.get('password')||''))) redirect('/'); redirect('/?bad=1') }
 async function logoutAction() { 'use server'; await logout(); redirect('/') }
@@ -45,10 +46,12 @@ export default async function Page({ searchParams }: { searchParams?: Promise<Re
   const snapshot = store.latestSnapshot()
   const coach = buildCoach(autoPlans, inventory, targets, settings, snapshot)
   const playbook = buildPlaybook(autoPlans, inventory, targets, settings, snapshot)
-  const farmStatus = parseFarm(snapshot)
+  const simpleGuide = buildSimpleGuide(autoPlans, inventory, targets, snapshot)
+  const farmStatus = simpleGuide.status
   const now = Date.now()
   return <main className="wrap">
     <div className="hero"><div><div className="big">🌻 Sunflower Helper</div><div className="muted">Dashboard sederhana untuk timer panen, reminder Telegram, inventory, dan target crafting.</div><div className="muted">Farm ID: {settings.farmId || process.env.SUNFLOWER_FARM_ID || 'not set'}</div></div><form action={logoutAction}><button className="danger">Logout</button></form></div>
+    <section className="card simpleHero" style={{marginBottom:14}}><div className="eyebrow">SIMPLE MODE</div><h1>{simpleGuide.main.title}</h1><div className="simpleGrid"><div><b>Di mana?</b><p>{simpleGuide.main.where}</p></div><div><b>Kenapa?</b><p>{simpleGuide.main.why}</p></div><div><b>Selesai kalau</b><p>{simpleGuide.main.done}</p></div></div><h3>Urutan main sekarang</h3><ol className="simpleSteps">{simpleGuide.steps.map((s,i)=><li className={s.tone||''} key={i}><b>{s.title}</b><span>{s.where}</span><small>{s.why}</small></li>)}</ol></section>
     <section className="card playbook" style={{marginBottom:14}}><div className="eyebrow">PLAYBOOK MODE</div><h2>{playbook.title}</h2><p className="muted">{playbook.summary}</p><ol className="steps">{playbook.steps.map((step,i)=><li key={i}><b>{step.label}</b><p>{step.detail}</p>{step.doneWhen&&<small>Done kalau: {step.doneWhen}</small>}</li>)}</ol><div className="nextCheck">Next check: {playbook.nextCheck}</div></section>
     <div className="grid">
       <section className="card compact"><h2>Settings ringkas</h2><p className="muted">Auto-sync farm + inventory aktif. Guide berubah sesuai goal.</p><div className="row"><span className="pill ok">Auto sync: ON</span><span className="pill ok">Telegram: ON</span><span className="pill">Farm ID: {settings.farmId || process.env.SUNFLOWER_FARM_ID || '3132688624394422'}</span><span className="pill">Last sync: {snapshot ? new Date(snapshot.fetchedAt).toLocaleTimeString() : 'none'}</span></div><form action={setGoal} className="row" style={{marginTop:12}}><select name="goal" defaultValue={settings.goal || 'balanced'}><option value="balanced">Balanced</option><option value="profit">Profit</option><option value="craft">Craft target</option><option value="level">Level/XP</option></select><button>Set Goal</button></form><form action={testTelegram} style={{marginTop:12}}><button type="submit">Test Telegram</button></form></section>
