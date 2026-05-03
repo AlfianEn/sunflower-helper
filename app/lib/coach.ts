@@ -38,8 +38,10 @@ export function buildPlaybook(autoPlans: AutoCropPlan[], inventory: InventoryIte
   if (readyCooking.length) steps.push({ label:`Ambil masakan ready (${readyCooking.length})`, detail: readyCooking.map(c=>`${c.name} di ${c.building}`).join(', '), doneWhen:'Semua masakan ready sudah diambil.' })
   const readyResources = status.resources.filter(r=>r.ready)
   if (readyResources.length) { const g=readyResources.reduce<Record<string,number>>((a,r)=>(a[r.type]=(a[r.type]||0)+1,a),{}); steps.push({ label:`Ambil resource ready`, detail:Object.entries(g).map(([k,v])=>`${v} ${k}`).join(', '), doneWhen:'Pohon/batu/ore ready sudah diambil.' }) }
-  const openDeliveries = status.deliveries.filter(d=>!d.completed)
-  if (openDeliveries.length) steps.push({ label:`Cek delivery (${openDeliveries.length})`, detail: openDeliveries.map(d=>`${d.from}: ${Object.entries(d.items).map(([k,v])=>`${v} ${k}`).join(', ')}`).join(' | '), doneWhen:'Delivery yang bisa dipenuhi sudah dikirim.' })
+  const doableDeliveries = status.deliveries.filter(d=>!d.completed && d.fulfillable)
+  const blockedDeliveries = status.deliveries.filter(d=>!d.completed && !d.fulfillable)
+  if (doableDeliveries.length) steps.push({ label:`Kirim delivery (${doableDeliveries.length})`, detail: doableDeliveries.map(d=>`${d.from}: ${Object.entries(d.items).map(([k,v])=>`${v} ${k}`).join(', ')}`).join(' | '), doneWhen:'Delivery yang bisa dipenuhi sudah dikirim.' })
+  else if (blockedDeliveries.length) steps.push({ label:`Jangan paksa delivery dulu`, detail: blockedDeliveries.map(d=>`${d.from} butuh ${Object.entries(d.items).map(([k,v])=>`${v} ${k}`).join(', ')}`).join(' | '), doneWhen:'Bahan delivery cukup.' })
   if (status.chores.length) steps.push({ label:'Kerjakan chore yang nyambung', detail: status.chores.slice(0,4).join(' | '), doneWhen:'Progress chore harian bertambah.' })
   steps.push({ label:'Daily quick check', detail:'Cek Daily Reward, Compost/Animals, dan event/seasonal task.', doneWhen:'Checklist harian selesai.' })
   const next = active.sort((a,b)=>new Date(a.harvestAt).getTime()-new Date(b.harvestAt).getTime())[0]
