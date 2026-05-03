@@ -1,0 +1,30 @@
+{
+  "scripts": {
+    "dev": "next dev -p 3050",
+    "build": "next build",
+    "start": "next start -p 3050",
+    "lint": "eslint",
+    "reminder": "node scripts-reminder.js"
+  },
+  "dependencies": {
+    "bcryptjs": "latest",
+    "better-sqlite3": "latest",
+    "clsx": "latest",
+    "date-fns": "latest",
+    "lucide-react": "latest",
+    "next": "latest",
+    "react": "latest",
+    "react-dom": "latest",
+    "zod": "latest"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "latest",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "latest",
+    "@types/react": "latest",
+    "@types/react-dom": "latest",
+    "eslint": "latest",
+    "eslint-config-next": "latest",
+    "typescript": "latest"
+  }
+}
