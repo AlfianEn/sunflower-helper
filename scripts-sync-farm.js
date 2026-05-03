@@ -10,7 +10,7 @@ const db = new Database(dbPath)
 const CROP_MINUTES = { Sunflower:1, Potato:5, Rhubarb:10, Pumpkin:30, Zucchini:30, Carrot:60, Yam:60, Cabbage:120, Broccoli:120, Soybean:180, Beetroot:240, Pepper:240, Cauliflower:480, Parsnip:720, Eggplant:960, Corn:1200, Onion:1200, Radish:1440, Wheat:1440, Turnip:1440, Kale:2160, Artichoke:2160, Barley:2880 }
 db.exec(`CREATE TABLE IF NOT EXISTS farm_snapshots (id INTEGER PRIMARY KEY AUTOINCREMENT, farmId TEXT NOT NULL, fetchedAt TEXT NOT NULL, json TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS auto_crop_plans (plotId TEXT PRIMARY KEY, crop TEXT NOT NULL, plantedAt TEXT, harvestAt TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'active', raw TEXT NOT NULL, updatedAt TEXT NOT NULL);`)
-function getJson(url) { return new Promise((resolve,reject)=>{ const req=https.request(url,{headers:{Authorization:`Bearer ${apiKey}`,'x-api-key':apiKey,Accept:'application/json'}},res=>{let data='';res.on('data',d=>data+=d);res.on('end',()=>{try{resolve({status:res.statusCode,json:JSON.parse(data)})}catch(e){reject(new Error(`bad json ${res.statusCode}: ${data.slice(0,120)}`))}})}); req.on('error',reject); req.end() }) }
+function getJson(url) { return new Promise((resolve,reject)=>{ const req=https.request(url,{headers:{Authorization:`Bearer ${apiKey}`,'x-api-key':apiKey,Accept:'application/json'}},res=>{let data='';res.on('data',d=>data+=d);res.on('end',()=>{try{resolve({status:res.statusCode,json:JSON.parse(data)})}catch(e){if(res.statusCode===429) resolve({status:429,json:{error:'rate_limited'}}); else reject(new Error(`bad json ${res.statusCode}: ${data.slice(0,120)}`))}})}); req.on('error',reject); req.end() }) }
 function findPlots(obj) {
   const out=[]
   function walk(v,p='') {
@@ -60,11 +60,22 @@ function extractCropEntries(farm) {
 }
 ;(async()=>{
   if (!apiKey) throw new Error('SFL_API_KEY missing')
+  const last = db.prepare('SELECT fetchedAt FROM farm_snapshots WHERE farmId=? ORDER BY id DESC LIMIT 1').get(farmId)
+  if (last && Date.now() - new Date(last.fetchedAt).getTime() < 60_000) { console.log(`skip sync; recent snapshot ${last.fetchedAt}`); return }
   const {status,json}=await getJson(`https://api.sunflower-land.com/community/farms/${farmId}`)
+  if (status === 429) { console.log('SFL API rate limited; keep previous snapshot'); return }
   if (status !== 200) throw new Error(`SFL API HTTP ${status}: ${JSON.stringify(json).slice(0,200)}`)
   const now=new Date().toISOString()
   db.prepare('INSERT INTO farm_snapshots(farmId,fetchedAt,json) VALUES(?,?,?)').run(farmId, now, JSON.stringify(json))
   const farm=json.farm || json
+  if (farm.inventory && typeof farm.inventory === 'object') {
+    const stmt = db.prepare('INSERT INTO inventory(name,qty,updatedAt) VALUES(?,?,?) ON CONFLICT(name) DO UPDATE SET qty=excluded.qty, updatedAt=excluded.updatedAt')
+    for (const [name, value] of Object.entries(farm.inventory)) stmt.run(name, Number(value || 0), now)
+  }
+  if (farm.stock && typeof farm.stock === 'object') {
+    const stmt = db.prepare('INSERT INTO inventory(name,qty,updatedAt) VALUES(?,?,?) ON CONFLICT(name) DO UPDATE SET qty=excluded.qty, updatedAt=excluded.updatedAt')
+    for (const [name, value] of Object.entries(farm.stock)) stmt.run(name, Number(value || 0), now)
+  }
   const entries=extractCropEntries(farm)
   for (const e of entries) db.prepare('INSERT INTO auto_crop_plans(plotId,crop,plantedAt,harvestAt,status,raw,updatedAt) VALUES(?,?,?,?,?,?,?) ON CONFLICT(plotId) DO UPDATE SET crop=excluded.crop, plantedAt=excluded.plantedAt, harvestAt=excluded.harvestAt, status=excluded.status, raw=excluded.raw, updatedAt=excluded.updatedAt').run(e.plotId,e.crop,e.plantedAt,e.harvestAt,'active',JSON.stringify(e.raw),now)
   fs.writeFileSync(path.join(process.cwd(),'data','last-farm-sync.json'), JSON.stringify({ok:true,status,farmId,fetchedAt:now,autoCropCount:entries.length,farmKeys:Object.keys(farm).slice(0,80)},null,2))
