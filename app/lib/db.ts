@@ -21,6 +21,7 @@ CREATE TABLE IF NOT EXISTS craft_targets (id INTEGER PRIMARY KEY AUTOINCREMENT,i
 CREATE TABLE IF NOT EXISTS auto_crop_plans (plotId TEXT PRIMARY KEY, crop TEXT NOT NULL, plantedAt TEXT, harvestAt TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'active', raw TEXT NOT NULL, updatedAt TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS farm_snapshots (id INTEGER PRIMARY KEY AUTOINCREMENT, farmId TEXT NOT NULL, fetchedAt TEXT NOT NULL, json TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS profit_snapshots (id INTEGER PRIMARY KEY AUTOINCREMENT, ts TEXT NOT NULL, sflEarned REAL NOT NULL DEFAULT 0, cropsHarvested INTEGER NOT NULL DEFAULT 0, deliveriesDone INTEGER NOT NULL DEFAULT 0, itemsCrafted INTEGER NOT NULL DEFAULT 0, notes TEXT);
+CREATE TABLE IF NOT EXISTS activity_log (id INTEGER PRIMARY KEY AUTOINCREMENT, ts TEXT NOT NULL, type TEXT NOT NULL, name TEXT NOT NULL, detail TEXT NOT NULL DEFAULT '', metadata TEXT);
 `)
 
 function profitTrend(days: number = 7) {
@@ -57,5 +58,19 @@ export const store = {
   recordProfit(data: { sflEarned: number; cropsHarvested: number; deliveriesDone: number; itemsCrafted: number; notes?: string }) {
     db.prepare('INSERT INTO profit_snapshots(ts, sflEarned, cropsHarvested, deliveriesDone, itemsCrafted, notes) VALUES(?,?,?,?,?,?)')
       .run(new Date().toISOString(), data.sflEarned, data.cropsHarvested, data.deliveriesDone, data.itemsCrafted, data.notes ?? null)
+  },
+  logActivity(entry: { type: string; name: string; detail: string; metadata?: string }) {
+    db.prepare('INSERT INTO activity_log(ts, type, name, detail, metadata) VALUES(?,?,?,?,?)')
+      .run(new Date().toISOString(), entry.type, entry.name, entry.detail, entry.metadata ?? null)
+  },
+  recentActivity(limit: number = 20) {
+    return db.prepare('SELECT * FROM activity_log ORDER BY ts DESC LIMIT ?').all(limit) as { id: number; ts: string; type: string; name: string; detail: string }[]
+  },
+  activityStats(days: number = 7) {
+    const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString()
+    return db.prepare('SELECT type, COUNT(*) as count FROM activity_log WHERE ts >= ? GROUP BY type').all(cutoff) as { type: string; count: number }[]
+  },
+  totalSnapshots() {
+    return (db.prepare('SELECT COUNT(*) as count FROM farm_snapshots').get() as { count: number }).count
   }
 }

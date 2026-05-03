@@ -37,3 +37,35 @@ ol{margin:0;padding-left:22px;line-height:1.8}h2{margin:0 0 8px}.card>p{margin-t
 
 /* === BUILDINGS === */
 .buildingGrid{display:grid;gap:8px;margin-top:10px}.buildingCard{background:#0d120b;border:1px solid #405535;border-radius:14px;padding:12px}.buildingCard.upgradable{border-color:#f7c948}.buildingHeader{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}.buildingLevel{font-size:12px;color:#9cae90}.upgradeInfo{display:grid;gap:6px}.upgradeCost{display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:13px}.costLabel{color:#9cae90;font-size:12px}.costOk{color:#86efac}.costMissing{color:#ef4444}.sflCost{color:#f7c948}.maxLevel{text-align:center}.maxBadge{background:#86efac;color:#102516;padding:4px 12px;border-radius:8px;font-size:12px;font-weight:700}.buildingGaps{margin-top:12px;padding:10px;background:#0d120b;border-radius:12px}.buildingGaps h3{margin:0 0 8px;font-size:14px}
+
+/* === SYNC DASHBOARD === */
+.syncGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:10px}.syncTile{background:#0d120b;border:1px solid #405535;border-radius:14px;padding:12px;text-align:center;display:grid;gap:4px}.syncTile span{font-size:12px;color:#9cae90}.syncTile b{font-size:20px;color:#f7c948}.syncTile small{font-size:11px;color:#7a8a6e}.syncStatus{font-weight:800;font-size:14px!important}.syncErrors{margin-top:10px;padding:10px;background:#2a1111;border:1px solid #ef4444;border-radius:10px}.syncErrors h3{margin:0 0 6px;font-size:13px}
+
+/* === ACTIVITY LOG === */
+.activityList{display:grid;gap:6px;margin-top:10px}.activityEntry{display:flex;align-items:center;gap:8px;padding:8px 10px;background:#0d120b;border:1px solid #405535;border-radius:10px;font-size:13px}.activityIcon{font-size:16px}.activityInfo{flex:1;display:grid;gap:2px}.activityInfo b{color:#f7c948}.activityInfo span{color:#b7c7aa;font-size:12px}.activityTime{font-size:11px;color:#9cae90}
+
+/* === SMART ALERTS === */
+.alertList{display:grid;gap:8px;margin-top:10px}.alertCard{background:#0d120b;border:1px solid #405535;border-radius:14px;padding:12px}.alertUrgent{border-color:#ef4444;background:#2a1111}.alertHigh{border-color:#f59e0b;background:#261b0a}.alertMedium{border-color:#84cc16}.alertLow{opacity:.8}.alertHeader{display:flex;align-items:center;gap:8px;margin-bottom:6px}.alertIcon{font-size:18px}.alertPriority{font-size:10px;padding:2px 6px;border-radius:6px;background:#0d120b;color:#9cae90;text-transform:uppercase}.alertMessage{margin:0 0 4px;font-size:13px;color:#d7e5ca}.alertAction{color:#f7c948;font-size:12px}
+
+/* === EFFICIENCY === */
+.efficiencyHero{display:flex;align-items:center;gap:16px;margin:10px 0}.gradeCircle{width:80px;height:80px;border:3px solid;border-radius:50%;display:grid;place-items:center;background:#0d120b}.gradeLetter{font-size:32px;font-weight:900;line-height:1}.gradeScore{font-size:10px;color:#9cae90}.efficiencySummary{flex:1;font-size:13px;color:#d7e5ca}.efficiencyBreakdown{display:grid;gap:6px;margin:10px 0}.effBar{background:#0d120b;border-radius:8px;padding:8px}.effBarHeader{display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;color:#b7c7aa}.effBarTrack{height:6px;background:#1a2418;border-radius:3px;overflow:hidden}.effBarFill{height:100%;background:#f7c948;border-radius:3px}.efficiencyTips{margin-top:10px;padding:10px;background:#0d120b;border-radius:10px}.efficiencyTips h3{margin:0 0 6px;font-size:13px}.efficiencyTips p{margin:4px 0;font-size:13px;color:#d7e5ca}
+
+/* === SEASONAL EVENTS === */
+.eventGrid{display:grid;gap:8px;margin-top:10px}.eventCard{display:flex;align-items:center;gap:12px;padding:12px;background:#0d120b;border:1px solid #405535;border-radius:14px}.eventCard.active{border-color:#f7c948;background:#241a07}.eventCard.upcoming{opacity:.7}.eventIcon{font-size:28px}.eventInfo{flex:1;display:grid;gap:2px}.eventInfo b{color:#f7c948}.eventInfo p{margin:0;font-size:12px;color:#b7c7aa}.eventInfo small{color:#9cae90}.eventRewards{display:flex;gap:6px;font-size:12px;color:#86efac}
+
+/* === FISHING === */
+.fishingGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;margin-top:10px}.fishingCard{background:#0d120b;border:1px solid #405535;border-radius:12px;padding:10px;text-align:center;display:grid;gap:4px}.fishingCard.ready{border-color:#86efac;background:#102516}.fishingIcon{font-size:20px}.fishingCard b{font-size:13px;color:#f7c948}.fishingCard span{font-size:12px;color:#b7c7aa}.fishingCard small{font-size:10px;color:#9cae90}
+
+/* === COMPOST === */
+.compostGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin-top:10px}.compostCard{background:#0d120b;border:1px solid #405535;border-radius:12px;padding:10px;display:grid;gap:4px}.compostCard.ready{border-color:#86efac;background:#102516}.compostCard b{font-size:13px;color:#f7c948}.compostLevel{font-size:11px;color:#9cae90}.compostCard span{font-size:12px;color:#b7c7aa}.compostCard small{font-size:11px;color:#9cae90}
+
+/* === EXPANSION === */
+.expansionGrid{display:grid;gap:8px;margin-top:10px}.expansionCard{background:#0d120b;border:1px solid #405535;border-radius:14px;padding:12px}.expansionHeader{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}.expansionLevel{font-size:12px;color:#9cae90}.expansionCost{display:flex;gap:8px;flex-wrap:wrap;font-size:13px}.costMissing{color:#ef4444}.costOk{color:#86efac}
+
+/* === WEEKLY REPORT === */
+.weeklyStats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:10px 0}.weeklyStat{background:#0d120b;border:1px solid #405535;border-radius:12px;padding:10px;text-align:center}.weeklyStat b{font-size:24px;color:#f7c948;display:block}.weeklyStat span{font-size:11px;color:#9cae90}.weeklyHighlights,.weeklyRecommendations{margin-top:10px;padding:10px;background:#0d120b;border-radius:10px}.weeklyHighlights h3,.weeklyRecommendations h3{margin:0 0 6px;font-size:13px}.weeklyHighlights p,.weeklyRecommendations p{margin:4px 0;font-size:13px;color:#d7e5ca}
+
+/* === BOT COMMANDS === */
+.commandGrid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:10px}.commandCard{background:#0d120b;border:1px solid #405535;border-radius:12px;padding:10px;display:grid;gap:4px}.commandCard code{color:#f7c948;font-weight:700;font-size:14px}.commandCard span{font-size:12px;color:#b7c7aa}
+
+@media(max-width:560px){.syncGrid,.weeklyStats{grid-template-columns:1fr 1fr}.commandGrid{grid-template-columns:1fr}.gradeCircle{width:60px;height:60px}.gradeLetter{font-size:24px}}

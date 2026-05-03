@@ -4,7 +4,8 @@ import { missingFor } from './lib/crafting'
 import { buildPlaybook } from './lib/coach'
 import { serverNow } from './lib/farmStatus'
 import { buildSimpleGuide } from './lib/simpleGuide'
-import { getTodayStats, getProfitTrend } from './lib/profit-tracker'
+import { buildSmartAlerts } from './lib/smart-notify'
+import { generateWeeklyReport } from './lib/weekly-report'
 
 import { LoginPage } from './components/login-page'
 import { HeroHeader } from './components/hero-header'
@@ -26,6 +27,16 @@ import { EnergyPanel } from './components/energy-panel'
 import { GoalsPanel } from './components/goals-panel'
 import { QuestTracker } from './components/quest-tracker'
 import { BuildingPlanner } from './components/building-planner'
+import { SyncDashboard } from './components/sync-dashboard'
+import { ActivityLogPanel } from './components/activity-log-panel'
+import { SmartAlertsPanel } from './components/smart-alerts'
+import { EfficiencyPanel } from './components/efficiency-panel'
+import { SeasonalEventsPanel } from './components/seasonal-events'
+import { FishingPanel } from './components/fishing-panel'
+import { CompostPanel } from './components/compost-panel'
+import { ExpansionPanel } from './components/expansion-panel'
+import { WeeklyReportPanel } from './components/weekly-report-panel'
+import { BotCommandsPanel } from './components/bot-commands-panel'
 
 export default async function Page({ searchParams }: { searchParams?: Promise<Record<string, string>> }) {
   const params = await searchParams
@@ -71,6 +82,15 @@ export default async function Page({ searchParams }: { searchParams?: Promise<Re
   }
   const profitTrend = Array.from(trendByDate.values()).sort((a, b) => a.date.localeCompare(b.date))
 
+  // Smart alerts & activity
+  const smartAlerts = buildSmartAlerts(snapshot, autoPlans, inventory, targets)
+  const recentActivity = store.recentActivity(15)
+  const totalSnapshots = store.totalSnapshots()
+
+  // Weekly report
+  const weeklyProfits = store.profitTrend(7)
+  const weeklyReport = generateWeeklyReport(weeklyProfits as any, recentActivity as any)
+
   return (
     <main className="wrap">
       <HeroHeader farmId={farmId} goalLabel={goalLabel} syncAgeMin={syncAgeMin} />
@@ -80,10 +100,11 @@ export default async function Page({ searchParams }: { searchParams?: Promise<Re
         nextCheck={playbook.nextCheck}
         metrics={{ criticalCount, activeCropCount: activeCrops.length, readyCropCount: readyCrops.length, nextCrop, inventoryTypes: positiveInventory.length, seedTypes: seedStock.length, inventoryQty, craftGaps: targetGaps.length, activeTargets: targets.length }}
       />
+      <SmartAlertsPanel alerts={smartAlerts} />
       <FocusedRoute title={simpleGuide.main.title} where={simpleGuide.main.where} why={simpleGuide.main.why} done={simpleGuide.main.done} steps={simpleGuide.steps} />
       <PlaybookSection title={playbook.title} summary={playbook.summary} steps={playbook.steps} nextCheck={playbook.nextCheck} />
 
-      {/* NEW FEATURES */}
+      {/* CORE FEATURES */}
       <div className="featuresGrid">
         <ProductionOptimizer autoPlans={autoPlans} inventory={inventory} targets={targets} settings={settings} now={now} />
         <FarmTimeline autoPlans={autoPlans} snapshot={snapshot} now={now} />
@@ -96,14 +117,35 @@ export default async function Page({ searchParams }: { searchParams?: Promise<Re
 
       <div className="featuresGrid">
         <EnergyPanel snapshot={snapshot} goal={goalLabel} />
-        <GoalsPanel inventory={inventory} targets={targets} autoPlans={autoPlans} />
+        <EfficiencyPanel snapshot={snapshot} autoPlans={autoPlans} inventory={inventory} />
       </div>
 
       <div className="featuresGrid">
+        <GoalsPanel inventory={inventory} targets={targets} autoPlans={autoPlans} />
         <QuestTracker snapshot={snapshot} inventory={inventory} />
-        <BuildingPlanner snapshot={snapshot} inventory={inventory} />
       </div>
 
+      <div className="featuresGrid">
+        <BuildingPlanner snapshot={snapshot} inventory={inventory} />
+        <ExpansionPanel inventory={inventory} />
+      </div>
+
+      <div className="featuresGrid">
+        <FishingPanel snapshot={snapshot} />
+        <CompostPanel snapshot={snapshot} />
+      </div>
+
+      <div className="featuresGrid">
+        <SeasonalEventsPanel />
+        <SyncDashboard snapshot={snapshot} farmId={farmId} totalSnapshots={totalSnapshots} />
+      </div>
+
+      <div className="featuresGrid">
+        <WeeklyReportPanel report={weeklyReport} />
+        <ActivityLogPanel activities={recentActivity} />
+      </div>
+
+      <BotCommandsPanel />
       <SettingsPanel settings={settings} snapshot={snapshot} />
       <Toasts telegram={params?.telegram} />
       <StatusBoard status={farmStatus} />
