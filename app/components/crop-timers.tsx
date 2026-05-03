@@ -1,4 +1,3 @@
-import { formatEta } from '../lib/farmStatus'
 import { getCrop } from '../lib/crops'
 import { markDone } from './actions'
 

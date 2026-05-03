@@ -10,7 +10,7 @@ export function SettingsPanel({ settings, snapshot }: { settings: Record<string,
         <div className="row">
           <span className="pill ok">Auto sync: ON</span>
           <span className="pill ok">Telegram: ON</span>
-          <span className="pill">Farm ID: {settings.farmId || process.env.SUNFLOWER_FARM_ID || 'default'}</span>
+          <span className="pill">Farm ID: {settings.farmId || 'not set'}</span>
           <span className="pill">Last sync: {snapshot ? new Date(snapshot.fetchedAt).toLocaleTimeString() : 'none'}</span>
         </div>
         <form action={setGoal} className="row" style={{ marginTop: 12 }}>

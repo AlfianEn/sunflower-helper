@@ -31,7 +31,7 @@ function getAvailableSeeds(inv: Record<string, number>): { crop: string; seeds: 
   })).filter(c => c.seeds > 0)
 }
 
-function getBestCrop(inv: Record<string, number>, goal: string, targets: CraftTarget[]) {
+function getBestCrop(inv: Record<string, number>, goal: string, targets: CraftTarget[]): { name: string; seed: number; sell: number; minutes: number } | null {
   const candidates = getAvailableSeeds(inv)
   if (candidates.length === 0) return null
 

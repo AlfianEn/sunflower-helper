@@ -87,19 +87,22 @@ export function buildTimeline(
   })
 }
 
+function addToGroup(groups: Map<string, TimelineEvent[]>, key: string, event: TimelineEvent) {
+  let group = groups.get(key)
+  if (!group) { group = []; groups.set(key, group) }
+  group.push(event)
+}
+
 export function groupByHour(events: TimelineEvent[]): { hour: string; events: TimelineEvent[] }[] {
   const groups = new Map<string, TimelineEvent[]>()
   
   for (const e of events) {
     if (e.status === 'ready') {
-      const key = 'NOW'
-      if (!groups.has(key)) groups.set(key, [])
-      groups.get(key)!.push(e)
+      addToGroup(groups, 'NOW', e)
     } else {
       const d = new Date(e.time)
       const key = `${d.getHours().toString().padStart(2, '0')}:00`
-      if (!groups.has(key)) groups.set(key, [])
-      groups.get(key)!.push(e)
+      addToGroup(groups, key, e)
     }
   }
 

@@ -1,4 +1,4 @@
-import { RECIPES, missingFor } from './crafting'
+import { missingFor } from './crafting'
 import type { InventoryItem, CraftTarget } from './db'
 
 export type MaterialNeed = {
